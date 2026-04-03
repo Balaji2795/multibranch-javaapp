@@ -29,14 +29,17 @@ pipeline {
             }
         }
 
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv("${SONARQUBE_ENV}") {
-                    sh 'mvn sonar:sonar'
-                }
-            }
+       stage('SonarQube Analysis') {
+    steps {
+        withSonarQubeEnv('sonar-server') {
+            sh '''
+            mvn clean verify sonar:sonar \
+            -Dsonar.projectKey=myweb \
+            -Dsonar.projectName="My Web App"
+            '''
         }
-
+    }
+}
         stage('Quality Gate') {
             steps {
                 timeout(time: 2, unit: 'MINUTES') {
