@@ -7,7 +7,7 @@
 
     <groupId>in.javahome</groupId>
     <artifactId>myweb</artifactId>
-    <version>8.6.7</version>
+    <version>8.6.8</version>
     <packaging>war</packaging>
 
     <name>Java Home myweb</name>
@@ -28,7 +28,6 @@
         </dependency>
     </dependencies>
 
-    <!-- ✅ IMPORTANT: Distribution Management -->
     <distributionManagement>
         <repository>
             <id>maven-releases</id>
@@ -41,16 +40,5 @@
             <url>http://43.204.38.235:8081/repository/flm-snapshots/</url>
         </snapshotRepository>
     </distributionManagement>
-
-    <!-- ❌ REMOVE this (not needed and outdated HTTP) -->
-    <!--
-    <pluginRepositories>
-        <pluginRepository>
-            <id>maven1</id>
-            <name>Maven.org</name>
-            <url>http://repo1.maven.org/maven2</url>
-        </pluginRepository>
-    </pluginRepositories>
-    -->
 
 </project>
