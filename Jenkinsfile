@@ -9,8 +9,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = "balaji2795/javaapp"
         DOCKER_TAG = "${BUILD_NUMBER}"
-        NEXUS_URL = "http://43.204.38.235:8081"
-        SONARQUBE_ENV = "sonar-server"   // MUST match Jenkins config
+        SONARQUBE_ENV = "sonar-server"
     }
 
     stages {
@@ -29,20 +28,21 @@ pipeline {
             }
         }
 
-    stage('SonarQube Analysis') {
-    steps {
-       withSonarQubeEnv('sonar-server') {
-    sh 'mvn clean verify sonar:sonar -Dsonar.projectKey=myweb'
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('sonar-server') {
+                    sh 'mvn sonar:sonar -Dsonar.projectKey=myweb'
+                }
+            }
         }
-    }
-}
-    stage('Quality Gate') {
-    steps {
-        timeout(time: 5, unit: 'MINUTES') {
-            waitForQualityGate abortPipeline: true
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
         }
-    }
-}
 
         stage('Package') {
             steps {
@@ -52,16 +52,11 @@ pipeline {
 
         stage('Upload to Nexus') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'nexus-creds',
-                    usernameVariable: 'NEXUS_USER',
-                    passwordVariable: 'NEXUS_PASS'
-                )]) {
-                    sh """
-                    mvn deploy \
-                    -Dnexus.username=$NEXUS_USER \
-                    -Dnexus.password=$NEXUS_PASS
-                    """
+                // ✅ IMPORTANT: Use Maven settings.xml
+                configFileProvider([configFile(fileId: 'maven-settings', variable: 'MAVEN_SETTINGS')]) {
+                    sh '''
+                    mvn deploy --settings $MAVEN_SETTINGS -DskipTests
+                    '''
                 }
             }
         }
@@ -79,10 +74,10 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    sh """
+                    sh '''
                     echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                     docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
-                    """
+                    '''
                 }
             }
         }
@@ -90,9 +85,9 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-                    sh """
+                    sh '''
                     kubectl set image deployment/javaapp javaapp=${DOCKER_IMAGE}:${DOCKER_TAG} --record
-                    """
+                    '''
                 }
             }
         }
