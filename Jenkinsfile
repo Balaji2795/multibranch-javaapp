@@ -30,7 +30,7 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('sonar-server') {
+                withSonarQubeEnv("${SONARQUBE_ENV}") {
                     sh 'mvn sonar:sonar -Dsonar.projectKey=myweb'
                 }
             }
@@ -52,10 +52,10 @@ pipeline {
 
         stage('Upload to Nexus') {
             steps {
-                // ✅ IMPORTANT: Use Maven settings.xml
+                // ✅ Ensure settings.xml exists in Jenkins Managed Files
                 configFileProvider([configFile(fileId: 'maven-settings', variable: 'MAVEN_SETTINGS')]) {
                     sh '''
-                    mvn deploy --settings $MAVEN_SETTINGS -DskipTests
+                    mvn clean deploy --settings $MAVEN_SETTINGS -DskipTests
                     '''
                 }
             }
@@ -63,7 +63,9 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+                sh '''
+                docker build -t $DOCKER_IMAGE:$DOCKER_TAG .
+                '''
             }
         }
 
@@ -76,7 +78,7 @@ pipeline {
                 )]) {
                     sh '''
                     echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                    docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+                    docker push $DOCKER_IMAGE:$DOCKER_TAG
                     '''
                 }
             }
@@ -86,7 +88,8 @@ pipeline {
             steps {
                 withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
                     sh '''
-                    kubectl set image deployment/javaapp javaapp=${DOCKER_IMAGE}:${DOCKER_TAG} --record
+                    export KUBECONFIG=$KUBECONFIG
+                    kubectl set image deployment/javaapp javaapp=$DOCKER_IMAGE:$DOCKER_TAG --record
                     '''
                 }
             }
