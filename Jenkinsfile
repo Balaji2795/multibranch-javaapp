@@ -2,40 +2,30 @@ pipeline {
     agent any
 
     tools {
-        maven 'maven3'   // Configure in Jenkins
-        jdk 'jdk17'      // Configure in Jenkins
+        maven 'maven3'
+        jdk 'jdk17'
     }
 
     environment {
         DOCKER_IMAGE = "balaji2795/javaapp"
         DOCKER_TAG = "${BUILD_NUMBER}"
         NEXUS_URL = "http://43.204.38.235:8081"
-        SONARQUBE_ENV = "SonarQubeServer"
+        SONARQUBE_ENV = "sonar-server"   // MUST match Jenkins config
     }
 
     stages {
 
         stage('Checkout') {
             steps {
-                checkout scmGit(
-                    branches: [[name: '*/master']],
-                    userRemoteConfigs: [[
-                        credentialsId: 'git-creds',
-                        url: 'https://github.com/Balaji2795/multibranch-javaapp.git'
-                    ]]
-                )
+                git branch: 'master',
+                    credentialsId: 'git-creds',
+                    url: 'https://github.com/Balaji2795/multibranch-javaapp.git'
             }
         }
 
-        stage('Build') {
+        stage('Build & Test') {
             steps {
-                sh 'mvn clean compile'
-            }
-        }
-
-        stage('Test') {
-            steps {
-                sh 'mvn test'
+                sh 'mvn clean verify'
             }
         }
 
@@ -47,9 +37,17 @@ pipeline {
             }
         }
 
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 2, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
         stage('Package') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                sh 'mvn package -DskipTests'
             }
         }
 
@@ -71,7 +69,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t $DOCKER_IMAGE:$DOCKER_TAG ."
+                sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
             }
         }
 
@@ -83,8 +81,8 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
                     sh """
-                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                    docker push $DOCKER_IMAGE:$DOCKER_TAG
+                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
                     """
                 }
             }
@@ -94,7 +92,7 @@ pipeline {
             steps {
                 withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
                     sh """
-                    kubectl set image deployment/javaapp javaapp=$DOCKER_IMAGE:$DOCKER_TAG --record
+                    kubectl set image deployment/javaapp javaapp=${DOCKER_IMAGE}:${DOCKER_TAG} --record
                     """
                 }
             }
@@ -103,10 +101,10 @@ pipeline {
 
     post {
         success {
-            echo "Pipeline completed successfully!"
+            echo "✅ Pipeline completed successfully!"
         }
         failure {
-            echo "Pipeline failed!"
+            echo "❌ Pipeline failed!"
         }
     }
 }
