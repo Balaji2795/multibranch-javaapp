@@ -26,16 +26,15 @@
 	</dependencies>
 	
 	<distributionManagement>
-		 <snapshotRepository>
-		    <id>maven-releases</id>
-		    <url>http://43.204.38.235:8081/repository/sample-snapshots/</url>
-		 </snapshotRepository>
-		
-		<repository>
-		    <id>maven-snapshots</id>
-		    <url>http://43.204.38.235:8081/repository/flm-releases/</url>
-		</repository>
-  	</distributionManagement>
+    <repository>
+        <id>maven-releases</id>
+        <url>http://43.204.38.235:8081/repository/flm-releases/</url>
+    </repository>
+    <snapshotRepository>
+        <id>maven-snapshots</id>
+        <url>http://43.204.38.235:8081/repository/flm-snapshots/</url>
+    </snapshotRepository>
+</distributionManagement>
 	
 	<pluginRepositories>
 	    <pluginRepository>    
