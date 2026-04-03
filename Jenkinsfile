@@ -29,24 +29,20 @@ pipeline {
             }
         }
 
-       stage('SonarQube Analysis') {
+    stage('SonarQube Analysis') {
     steps {
-        withSonarQubeEnv('sonar-server') {
-            sh '''
-            mvn clean verify sonar:sonar \
-            -Dsonar.projectKey=myweb \
-            -Dsonar.projectName="My Web App"
-            '''
+       withSonarQubeEnv('sonar-server') {
+    sh 'mvn clean verify sonar:sonar -Dsonar.projectKey=myweb'
         }
     }
 }
-        stage('Quality Gate') {
-            steps {
-                timeout(time: 2, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
+    stage('Quality Gate') {
+    steps {
+        timeout(time: 5, unit: 'MINUTES') {
+            waitForQualityGate abortPipeline: true
         }
+    }
+}
 
         stage('Package') {
             steps {
